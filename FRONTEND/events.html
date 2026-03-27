@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Events - TRIVENZA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen mesh-bg-1 overflow-x-hidden relative flex flex-col">
+  <div class="bg-blob bg-blob-2 hidden md:block"></div>
+
+  <nav class="glass-nav text-[#1F2937] flex justify-between items-center px-6 md:px-16 py-4 sticky top-0 z-50">
+    <h1 class="text-2xl font-serif font-black tracking-tight flex items-center gap-2 text-[#D68D8D]">
+      <i class="fa-solid fa-leaf text-[#A8B5A2]"></i> TRIVENZA
+    </h1>
+    <div class="hidden md:flex items-center space-x-10 text-sm font-bold tracking-tight">
+      <a href="/" class="text-gray-500 hover:text-[#D68D8D] transition">Home</a>
+      <a href="/communities" class="text-gray-500 hover:text-[#D68D8D] transition">Communities</a>
+      <a href="/events" class="text-[#D68D8D] transition">Events</a>
+      <a href="/fundraisers" class="text-gray-500 hover:text-[#D68D8D] transition">Fundraisers</a>
+      <div id="nav-auth-state">
+          <a href="/login" class="btn-soft px-7 py-2.5 ml-4 text-xs">Login</a>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button id="mobile-menu-btn" class="md:hidden text-[#1F2937] text-2xl focus:outline-none">
+      <i class="fa-solid fa-bars-staggered"></i>
+    </button>
+  </nav>
+
+  <!-- Mobile Menu Overlay -->
+  <div id="mobile-menu" class="fixed inset-0 bg-white/95 backdrop-blur-xl z-[60] hidden flex flex-col items-center justify-center space-y-8 text-2xl font-serif font-black transition-all duration-300">
+    <button id="close-menu-btn" class="absolute top-6 right-6 text-3xl text-[#D68D8D]">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <a href="/" class="hover:text-[#D68D8D] transition">Home</a>
+    <a href="/communities" class="hover:text-[#D68D8D] transition">Communities</a>
+    <a href="/events" class="hover:text-[#D68D8D] transition">Events</a>
+    <a href="/fundraisers" class="hover:text-[#D68D8D] transition">Fundraisers</a>
+    <div id="mobile-nav-auth" class="pt-8">
+      <a href="/login" class="btn-soft px-10 py-4 text-sm">Login</a>
+    </div>
+  </div>
+
+  <div class="flex-grow max-w-7xl mx-auto w-full px-6 md:px-16 py-12 relative z-10">
+    <div class="mb-12 text-center" data-aos="fade-down">
+        <h2 class="text-5xl font-serif font-black text-[#1F2937] mb-4">Discover <span class="text-[#D68D8D]">Events</span></h2>
+        <p class="text-gray-400 max-w-2xl mx-auto leading-relaxed text-sm font-medium">Join local gatherings and mindful experiences curated for your peace.</p>
+    </div>
+
+    <!-- Create Form -->
+    <div class="glass-panel p-10 rounded-[40px] shadow-sm mb-12" data-aos="fade-up" data-aos-delay="100">
+        <h2 class="text-3xl font-serif font-black text-[#1F2937] mb-8">Host Event</h2>
+        <form id="eventForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="title" type="text" placeholder="Event title" class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+            <input id="date" type="datetime-local" class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+            <input id="location" type="text" placeholder="Location" class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+            <input id="price" type="number" min="0" step="0.01" placeholder="Event Price (0 for free)" class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" value="0">
+            <textarea id="description" placeholder="Description" class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium md:col-span-2" rows="3" required></textarea>
+            <div id="event-image-preview" class="hidden relative w-full h-36 rounded-2xl overflow-hidden border border-gray-100 md:col-span-2 mb-1">
+                <img src="" class="w-full h-full object-cover">
+            </div>
+            <input id="event-image" type="file" accept="image/*" onchange="previewEventImage(event)" class="w-full p-3 rounded-xl bg-white border border-[#E6DFFF] outline-none text-sm font-medium text-gray-500 md:col-span-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#E6DFFF] file:text-[#D68D8D] cursor-pointer">
+            <div class="md:col-span-2 mt-2 flex flex-col sm:flex-row gap-3">
+                <button id="event-submit-btn" class="btn-soft w-full md:w-auto px-8 py-3 text-sm">Publish Event</button>
+                <button id="event-cancel-btn" type="button" onclick="cancelEventEdit()" class="btn-outline-lilac w-full md:w-auto px-8 py-3 text-sm hidden">Cancel Edit</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- List -->
+    <div id="eventsContainer" class="grid lg:grid-cols-3 md:grid-cols-2 gap-8"></div>
+  </div>
+
+  <footer class="bg-white border-t border-gray-100 py-12 px-6 relative z-10 mt-auto">
+    <div class="max-w-7xl mx-auto text-center">
+        <h2 class="text-2xl font-serif font-black mb-3 text-[#D68D8D]"><i class="fa-solid fa-leaf text-[#A8B5A2]"></i> TRIVENZA</h2>
+        <p class="text-gray-400 text-xs font-medium uppercase tracking-widest">&copy; 2026 Mindful Community Platform by rithika.</p>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+  <script src="/script.js"></script>
+</body>
+</html>

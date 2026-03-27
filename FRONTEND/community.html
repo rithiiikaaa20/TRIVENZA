@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Community Details - TRIVENZA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen mesh-bg-1 overflow-x-hidden relative flex flex-col">
+  <div class="bg-blob bg-blob-1 hidden md:block"></div>
+
+  <!-- Navbar -->
+  <nav class="glass-nav text-[#1F2937] flex justify-between items-center px-6 md:px-16 py-4 sticky top-0 z-50">
+    <h1 class="text-2xl font-serif font-black tracking-tight flex items-center gap-2 text-[#D68D8D]">
+      <a href="/"><i class="fa-solid fa-leaf text-[#A8B5A2]"></i> TRIVENZA</a>
+    </h1>
+    <div class="hidden md:flex items-center space-x-10 text-sm font-bold tracking-tight">
+      <a href="/" class="text-gray-500 hover:text-[#D68D8D] transition">Home</a>
+      <a href="/communities" class="text-[#D68D8D] transition">Communities</a>
+      <a href="/events" class="text-gray-500 hover:text-[#D68D8D] transition">Events</a>
+      <a href="/fundraisers" class="text-gray-500 hover:text-[#D68D8D] transition">Fundraisers</a>
+      <div id="nav-auth-state">
+          <a href="/login" class="btn-soft px-6 py-2 ml-4">Login</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex-grow w-full relative z-10 flex flex-col">
+    <!-- Header Banner -->
+    <div class="w-full h-64 md:h-80 relative bg-gray-200">
+        <img id="detail-banner" src="https://images.unsplash.com/photo-1528605105345-5344ea20e269?auto=format&fit=crop&q=80" alt="Banner" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 w-full px-6 md:px-16 pb-8">
+            <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <span id="detail-category" class="bg-[#D68D8D] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full mb-4 inline-block shadow-sm">Category</span>
+                    <h1 id="detail-name" class="text-5xl md:text-6xl font-serif font-black text-white mb-3 text-shadow">Community Name</h1>
+                    <p id="detail-created-by" class="text-white/80 text-xs font-bold uppercase tracking-[0.18em] mb-3">Created by: Member</p>
+                    <p id="detail-members" class="text-white/90 font-bold text-sm flex items-center gap-2 uppercase tracking-wide">
+                        <i class="fa-solid fa-user-group text-white/60"></i> <span>0 Members</span>
+                    </p>
+                </div>
+                <!-- Action Buttons Wrapper -->
+                <div class="flex items-center gap-3">
+                    <div id="creator-controls" class="hidden items-center gap-2">
+                        <button onclick="document.getElementById('edit-community-modal').classList.remove('hidden')" class="btn-ghost bg-white/20 hover:bg-white text-white hover:text-[#8B5CF6] px-4 py-3 rounded-xl transition backdrop-blur-sm" title="Edit Community">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deleteCommunity()" class="btn-ghost bg-white/20 hover:bg-red-500 text-white px-4 py-3 rounded-xl transition backdrop-blur-sm" title="Delete Community">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <button id="detail-join-btn" onclick="toggleJoinCommunity()" class="btn-soft px-8 py-3 text-sm shadow-xl hover:scale-105 transition-transform">
+                        Join Community
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-5xl mx-auto w-full px-6 py-8 md:py-12 flex-grow flex flex-col">
+        
+        <p id="detail-desc" class="text-gray-600 text-lg mb-8 leading-relaxed font-medium">Loading description...</p>
+
+        <!-- Access Gateway -->
+        <div id="access-gateway" class="hidden glass-panel p-12 text-center rounded-[32px] shadow-sm mb-12 flex-grow items-center justify-center flex-col">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-400">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-2xl font-bold font-poppins text-[#1F2937] mb-3">Members Only</h3>
+            <p class="text-gray-500 mb-6 max-w-sm mx-auto">Join this community to unlock posts, chats, and events!</p>
+            <button onclick="document.getElementById('detail-join-btn').click()" class="btn-outline-lilac px-8 py-3 text-sm">Join Now</button>
+        </div>
+
+        <!-- Locked Content Wrapper -->
+        <div id="unlocked-content" class="hidden flex-col flex-grow">
+            <!-- Tabs -->
+            <div class="flex border-b border-[#F9F7F2] mb-10 space-x-12">
+                <button onclick="switchTab('posts')" id="tab-posts" class="tab-btn active pb-5 text-sm font-black border-b-2 border-[#D68D8D] text-[#D68D8D] transition uppercase tracking-widest">Posts</button>
+                <button onclick="switchTab('chat')" id="tab-chat" class="tab-btn pb-5 text-sm font-black border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition uppercase tracking-widest">Chat</button>
+                <button onclick="switchTab('events')" id="tab-events" class="tab-btn pb-5 text-sm font-black border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition uppercase tracking-widest">Events</button>
+            </div>
+
+            <!-- Tab: Posts -->
+            <div id="content-posts" class="tab-content flex-grow">
+                <div class="glass-panel p-6 rounded-2xl shadow-sm mb-8">
+                    <form onsubmit="submitPost(event)" class="flex flex-col gap-4">
+                        <textarea id="post-input" placeholder="Share something with the community..." class="w-full p-4 rounded-xl bg-white border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium resize-none" rows="3" required></textarea>
+                        
+                        <!-- Post Image Preview -->
+                        <div id="post-image-preview" class="hidden relative w-32 h-32 rounded-lg overflow-hidden border border-[#E6DFFF]">
+                            <img src="" class="w-full h-full object-cover">
+                            <button type="button" onclick="clearPostImage()" class="absolute top-1 right-1 bg-black/50 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-black transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <input type="file" id="post-image-input" accept="image/*" class="hidden" onchange="previewPostImage(event)">
+                                <button type="button" onclick="document.getElementById('post-image-input').click()" class="text-gray-400 hover:text-[#8B5CF6] transition p-2 rounded-lg hover:bg-[#F3E8FF]">
+                                    <i class="fa-solid fa-image text-lg"></i>
+                                </button>
+                            </div>
+                            <button class="btn-soft px-8 py-2 text-sm">Post</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="posts-feed" class="space-y-6">
+                    <!-- Posts load here -->
+                </div>
+            </div>
+
+            <!-- Tab: Chat -->
+            <div id="content-chat" class="tab-content hidden flex-col h-[500px]">
+                <div class="glass-panel rounded-2xl shadow-sm flex flex-col h-full bg-white/50 border border-t-0 md:border-t overflow-hidden">
+                    <!-- Messages Area -->
+                    <div id="chat-feed" class="flex-grow overflow-y-auto p-6 space-y-4 flex flex-col bg-[#FAFAFC]/50 hide-scrollbar">
+                        <!-- Messages load here -->
+                    </div>
+                    <!-- Input Area -->
+                    <div class="p-4 bg-white border-t border-[#E6DFFF]">
+                        <form onsubmit="sendChatMessage(event)" class="flex gap-3">
+                            <input id="chat-input" type="text" placeholder="Type a message..." class="flex-grow p-3 rounded-full bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm" required>
+                            <button class="w-12 h-12 rounded-full bg-[#8B5CF6] text-white flex items-center justify-center hover:bg-[#7c3aed] transition hover:scale-105 shadow-md">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Events -->
+            <div id="content-events" class="tab-content hidden flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold font-poppins text-[#1F2937]">Community Events</h3>
+                    <button onclick="document.getElementById('create-event-modal').classList.remove('hidden')" class="btn-outline-lilac px-5 py-2 text-xs">Create Event</button>
+                </div>
+                <div id="community-events-list" class="grid sm:grid-cols-2 gap-6">
+                    <!-- Events load here -->
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Create Event Modal -->
+  <div id="create-event-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/30 backdrop-blur-[8px]">
+      <div class="glass-panel bg-white/90 p-12 rounded-[48px] shadow-2xl w-full max-w-lg relative border border-white/40">
+          <button onclick="document.getElementById('create-event-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700">
+              <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+          <h2 class="text-3xl font-serif font-black text-[#1F2937] mb-8">Host Local Event</h2>
+          <form onsubmit="submitCommunityEvent(event)" class="flex flex-col gap-4">
+              <input id="ce-title" type="text" placeholder="Event title" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+              <input id="ce-date" type="text" placeholder="Date & Time" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+              <input id="ce-loc" type="text" placeholder="Location" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+              <textarea id="ce-desc" placeholder="Description" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium resize-none" rows="2" required></textarea>
+              <button class="btn-soft w-full py-4 text-sm mt-2">Publish Event</button>
+          </form>
+      </div>
+  </div>
+
+  <!-- Edit Community Modal -->
+  <div id="edit-community-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/30 backdrop-blur-[8px]">
+      <div class="glass-panel bg-white/90 p-12 rounded-[48px] shadow-2xl w-full max-w-lg relative border border-white/40">
+          <button onclick="document.getElementById('edit-community-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700">
+              <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+          <h2 class="text-3xl font-serif font-black text-[#1F2937] mb-8">Edit Community</h2>
+          <form onsubmit="updateCommunity(event)" class="flex flex-col gap-4">
+              <input id="edit-community-name" type="text" placeholder="Community name" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+              <input id="edit-community-category" type="text" placeholder="Category" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium" required>
+              <textarea id="edit-community-description" placeholder="Description" class="w-full p-4 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium resize-none" rows="3" required></textarea>
+              <label class="text-xs font-bold text-gray-500 uppercase mt-2">Update Cover Image</label>
+              <div id="edit-image-preview" class="hidden relative w-full h-32 rounded-xl overflow-hidden border border-[#E6DFFF] mb-2">
+                  <img src="" class="w-full h-full object-cover">
+              </div>
+              <input id="edit-community-image" type="file" accept="image/*" onchange="previewEditImage(event)" class="w-full p-3 rounded-xl bg-[#FAFAFC] border border-[#E6DFFF] outline-none focus:border-[#C8B6FF] text-sm font-medium text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#E6DFFF] file:text-[#8B5CF6] hover:file:bg-[#C8B6FF] transition cursor-pointer">
+              <button class="btn-soft w-full py-4 text-sm mt-4">Save Changes</button>
+          </form>
+      </div>
+  </div>
+
+  <footer class="bg-white border-t border-gray-100 py-8 px-6 relative z-10 mt-auto">
+    <div class="max-w-7xl mx-auto text-center">
+        <h2 class="text-2xl font-serif font-black mb-3 text-[#D68D8D]"><i class="fa-solid fa-leaf text-[#A8B5A2]"></i> TRIVENZA</h2>
+        <p class="text-gray-400 text-xs font-medium uppercase tracking-widest">&copy; 2026 Mindful Community Platform.</p>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>
