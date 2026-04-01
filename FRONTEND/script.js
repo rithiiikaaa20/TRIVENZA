@@ -1,4 +1,11 @@
-const API_BASE = "/api";
+const isLocalFrontend =
+  window.location.protocol === "file:" ||
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+
+const API_BASE = isLocalFrontend && window.location.port !== "5000"
+  ? "http://localhost:5000/api"
+  : "/api";
 const STORAGE_KEYS = {
   user: "trivenzaUser",
   legacyUser: "currentUser",
@@ -93,6 +100,16 @@ function getCurrentUser() {
     return normalizeUser(JSON.parse(storedUser));
   } catch {
     return null;
+  }
+}
+
+function getStoredUsername() {
+  try {
+    const storedUser = localStorage.getItem(STORAGE_KEYS.legacyUser) || localStorage.getItem(STORAGE_KEYS.user) || "null";
+    const parsed = JSON.parse(storedUser);
+    return String(parsed?.username || parsed?.name || "").trim();
+  } catch {
+    return "";
   }
 }
 
@@ -196,6 +213,33 @@ function mergeEvents(serverEvents, localEvents, communityId = "") {
   });
 
   return sortByCreatedAtDesc(merged);
+}
+
+function normalizeEventRecord(eventItem = {}) {
+  return {
+    ...eventItem,
+    id: eventItem.id || eventItem._id || "",
+    createdBy: sanitizeCreatedBy(eventItem.createdBy) || "Anonymous",
+    price: Number(eventItem.price || 0),
+    creator_id: eventItem.creator_id || "",
+    communityId: eventItem.communityId || "",
+    createdAt: eventItem.createdAt || "",
+  };
+}
+
+function isMongoLikeId(value = "") {
+  return /^[a-f\d]{24}$/i.test(String(value).trim());
+}
+
+function contribute() {
+  const amount = window.prompt("Enter contribution amount:");
+
+  if (!amount || Number.isNaN(Number(amount)) || Number(amount) <= 0) {
+    window.alert("Please enter a valid amount");
+    return;
+  }
+
+  window.alert(`Payment of ₹${amount} successful (dummy payment)`);
 }
 
 function upsertCachedEvent(eventItem, tempId = null) {
@@ -492,8 +536,7 @@ function buildEventPayload({ title, date, location, description, image = "", com
 
 async function createEvent(event) {
   event.preventDefault();
-  const user = requireAuth("Please login before publishing an event");
-  if (!user) return;
+  const user = getCurrentUser();
 
   const form = event.target;
   const submitButton = form.querySelector("button[type='submit'], button:not([type])");
@@ -540,13 +583,18 @@ async function createEvent(event) {
       description,
       image: image || existingEvent?.image || "",
       price,
-      createdBy: sanitizeCreatedBy(getDisplayName(user)) || "User",
-      creator_id: user.id,
+      createdBy: sanitizeCreatedBy(getStoredUsername() || user?.username || user?.name || user?.email) || "Anonymous",
+      creator_id: user?.id || "",
       createdAt: existingEvent?.createdAt || new Date().toISOString(),
     };
 
     let savedEvent = null;
     if (editingEventId) {
+      if (!user?.id) {
+        showToast("Please login to edit an event", "error");
+        return;
+      }
+
       const data = await fetchJson(`${API_BASE}/events/${editingEventId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -560,8 +608,13 @@ async function createEvent(event) {
       showToast("Event updated successfully", "success");
     } else {
       const draft = {
-        ...buildEventPayload({ title, date: payload.date, location, description, image: payload.image }, user),
+        ...buildEventPayload(
+          { title, date: payload.date, location, description, image: payload.image },
+          user || { id: "", username: "Anonymous", name: "Anonymous" }
+        ),
         price,
+        createdBy: payload.createdBy,
+        creator_id: payload.creator_id,
       };
       upsertCachedEvent(draft);
       await loadEvents();
@@ -571,7 +624,7 @@ async function createEvent(event) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      savedEvent = data.event || draft;
+      savedEvent = normalizeEventRecord(data.event || data || draft);
       upsertCachedEvent(savedEvent, draft.id);
       showToast("Event created successfully", "success");
     }
@@ -604,7 +657,9 @@ function eventCardMarkup(ev, index = 0) {
   const safeTitle = escapeHtml(ev.title);
   const createdBy = sanitizeCreatedBy(ev.createdBy) || "User";
   const price = Number(ev.price || 0);
-  const isCreator = getCurrentUser()?.id && ev.creator_id === getCurrentUser()?.id;
+  const currentUsername = sanitizeCreatedBy(getStoredUsername());
+  const isCreator = Boolean(currentUsername) && createdBy === currentUsername;
+  const deleteId = ev._id || ev.id;
   return `
     <div class="soft-card soft-shadow flex flex-col h-full overflow-hidden border border-[#D68D8D]/5" data-aos="fade-up" data-aos-delay="${index * 100}">
       <div class="w-full h-60 img-wrapper relative">
@@ -617,7 +672,7 @@ function eventCardMarkup(ev, index = 0) {
             <button onclick="editEvent('${escapeHtml(ev.id)}')" class="w-9 h-9 bg-white/90 backdrop-blur shadow-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-[#D68D8D] hover:text-white transition" title="Edit Event">
               <i class="fa-solid fa-pen-to-square text-sm"></i>
             </button>
-            <button onclick="deleteEvent('${escapeHtml(ev.id)}')" class="w-9 h-9 bg-white/90 backdrop-blur shadow-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-red-500 hover:text-white transition" title="Delete Event">
+            <button onclick="deleteEvent('${escapeHtml(deleteId)}')" class="w-9 h-9 bg-white/90 backdrop-blur shadow-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-red-500 hover:text-white transition" title="Delete Event">
               <i class="fa-solid fa-trash text-sm"></i>
             </button>
           </div>` : ""}
@@ -682,19 +737,43 @@ function editEvent(id) {
 }
 
 async function deleteEvent(id) {
-  const user = requireAuth("Please login to delete your event");
-  if (!user) return;
-
   showConfirmModal("Are you sure you want to remove this event?", async () => {
     try {
-      await fetchJson(`${API_BASE}/events/${id}?user_id=${user.id}`, { method: "DELETE" });
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null")?.username || getStoredUsername();
+      console.log("Deleting event:", id, "User:", currentUser);
+
+      if (!currentUser) {
+        window.alert("Please login to delete your event");
+        return;
+      }
+
+      if (isMongoLikeId(id)) {
+        const res = await fetch(`http://localhost:5000/api/events/${id}?user=${encodeURIComponent(currentUser)}`, {
+          method: "DELETE",
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 403) {
+          window.alert("You can only delete your own events");
+          return;
+        }
+
+        if (!res.ok) {
+          window.alert(data?.message || data?.error || "Failed to delete event");
+          return;
+        }
+
+        window.alert(data?.message || "Event deleted successfully");
+      } else {
+        window.alert("Event deleted successfully");
+      }
+
       loadedEvents = loadedEvents.filter((item) => item.id !== id);
       saveCachedEvents(readCachedEvents().filter((item) => item.id !== id));
       if (editingEventId === id) cancelEventEdit();
-      showToast("Event deleted successfully", "success");
       await loadEvents();
     } catch (error) {
-      showToast(error.message || "Failed to delete event", "error");
+      window.alert(error.message || "Failed to delete event");
     }
   });
 }
@@ -829,16 +908,11 @@ async function loadEvents() {
 
     try {
       const serverEvents = await fetchJson(`${API_BASE}/events`);
-      events = mergeEvents(serverEvents, localEvents).map((eventItem) => ({
-        ...eventItem,
-        createdBy: sanitizeCreatedBy(eventItem.createdBy) || "User",
-      }));
+      const normalizedServerEvents = (Array.isArray(serverEvents) ? serverEvents : []).map(normalizeEventRecord);
+      events = mergeEvents(normalizedServerEvents, localEvents).map(normalizeEventRecord);
       replaceCachedEventsForScope(events, "");
     } catch {
-      events = mergeEvents([], localEvents).map((eventItem) => ({
-        ...eventItem,
-        createdBy: sanitizeCreatedBy(eventItem.createdBy) || "User",
-      }));
+      events = mergeEvents([], localEvents).map(normalizeEventRecord);
     }
 
     loadedEvents = events;
@@ -938,7 +1012,7 @@ function fundraiserCardMarkup(f, index, userId) {
           <div class="w-full bg-white h-2 rounded-full mb-6">
             <div class="bg-[#D68D8D] h-2 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
           </div>
-          <button class="contribute-btn btn-soft w-full py-3 text-[10px] uppercase tracking-widest font-bold shadow-sm" data-fid="${escapeHtml(f.id)}" data-ftitle="${safeTitle}">
+          <button onclick="contribute()" class="contribute-btn btn-soft w-full py-3 text-[10px] uppercase tracking-widest font-bold shadow-sm" data-fid="${escapeHtml(f.id)}" data-ftitle="${safeTitle}">
             Contribute
           </button>
         </div>
@@ -1059,7 +1133,6 @@ async function processDummyPayment() {
 document.addEventListener("click", (event) => {
   const contributeBtn = event.target.closest(".contribute-btn");
   if (contributeBtn) {
-    openPaymentModal(contributeBtn.dataset.fid, contributeBtn.dataset.ftitle);
     return;
   }
 
