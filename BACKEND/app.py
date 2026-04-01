@@ -248,6 +248,53 @@ def update_profile(user_id):
     }), 200
 
 
+@app.route("/api/users/<username>", methods=["DELETE"])
+def delete_user(username):
+    username = (username or "").strip()
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+
+    user = users_collection.find_one({"$or": [{"username": username}, {"name": username}]})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user_id = str(user["_id"])
+
+    users_collection.delete_one({"_id": user["_id"]})
+    events_collection.delete_many({
+        "$or": [
+            {"createdBy": username},
+            {"creator_id": user_id},
+        ]
+    })
+    communities_collection.delete_many({
+        "$or": [
+            {"createdBy": username},
+            {"creator_id": user_id},
+        ]
+    })
+    fundraisers_collection.delete_many({
+        "$or": [
+            {"createdBy": username},
+            {"creator_id": user_id},
+        ]
+    })
+    posts_collection.delete_many({
+        "$or": [
+            {"userName": username},
+            {"userId": user_id},
+        ]
+    })
+    messages_collection.delete_many({
+        "$or": [
+            {"userName": username},
+            {"userId": user_id},
+        ]
+    })
+
+    return jsonify({"message": f"User {username} deleted successfully"}), 200
+
+
 # =========================
 # COMMUNITIES
 # =========================
@@ -640,16 +687,25 @@ def update_event(event_id):
 @app.route("/api/events/<event_id>", methods=["DELETE"])
 def delete_event(event_id):
     user_id = request.args.get("user_id")
+    username = request.args.get("user")
+    data = request.json or {}
     if not user_id:
-        data = request.json or {}
         user_id = data.get("user_id")
+    if not username:
+        username = data.get("user")
 
     try:
         event = events_collection.find_one({"_id": ObjectId(event_id)})
         if not event:
             return jsonify({"error": "Event not found"}), 404
 
-        if event.get("creator_id") != user_id:
+        event_creator_id = event.get("creator_id", "")
+        event_creator_name = normalize_created_by(event.get("createdBy"))
+
+        is_owner_by_id = bool(user_id) and event_creator_id == user_id
+        is_owner_by_name = bool(username) and event_creator_name == normalize_created_by(username)
+
+        if not is_owner_by_id and not is_owner_by_name:
             return jsonify({"error": "Unauthorized: Only the creator can delete this event"}), 403
 
         result = events_collection.delete_one({"_id": ObjectId(event_id)})
